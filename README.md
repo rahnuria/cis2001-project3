@@ -1,7 +1,7 @@
 # cis2001-project3
 commander and creature battle simulation using python
 overview:
-this project simulates a battle system betwwen two commanders. Each commander controls a collection od creatures. The creatures fight based on their strength and defense values.
+This system simulates a battle between two commanders using a sorted linked structure of creatures. Creatures are deep copied and inserted based on defense and strength. During battle, creatures fight pairwise, and damage is calculated using strength vs defense. Dead creatures are removed, and if one commander runs out of creatures, the remaining creature deals damage to the commander.defense values.
 FEATURES:
 .Deep copy of creatures.
 .Sorted insertion based on defense and strength.
