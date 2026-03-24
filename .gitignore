@@ -1,205 +1,154 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[codz]
-*$py.class
+class Creature:
+    def __init__(self, strength, defense, next_creature=None):
+        if not isinstance(strength, int) or not isinstance(defense, int):
+            raise ValueError("strength and defense must be integers")
+        if strength <= 0 or defense <= 0:
+            raise ValueError("strength and defense must be positive integers")
 
-# C extensions
-*.so
+        self.strength = strength
+        self.defense = defense
+        self.next_creature = next_creature
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+class Commander:
+    def __init__(self):
+        self.hit_points = 40
+        self.first_creature = None
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+    def _validate_chain(self, creature):
+        current = creature
+        while current is not None:
+            if not isinstance(current, Creature):
+                raise ValueError("invalid creature in chain")
+            if current.strength <= 0 or current.defense <= 0:
+                raise ValueError("creature stats must be positive")
+            current = current.next_creature
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py.cover
-.hypothesis/
-.pytest_cache/
-cover/
+    def _deep_copy_chain(self, creature):
+        if creature is None:
+            return None
 
-# Translations
-*.mo
-*.pot
+        self._validate_chain(creature)
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+        copied_head = Creature(creature.strength, creature.defense)
+        current_old = creature.next_creature
+        current_new = copied_head
 
-# Flask stuff:
-instance/
-.webassets-cache
+        while current_old is not None:
+            current_new.next_creature = Creature(
+                current_old.strength,
+                current_old.defense
+            )
+            current_new = current_new.next_creature
+            current_old = current_old.next_creature
 
-# Scrapy stuff:
-.scrapy
+        return copied_head
 
-# Sphinx documentation
-docs/_build/
+    def _comes_before(self, c1, c2):
+        # Higher defense first
+        if c1.defense > c2.defense:
+            return True
 
-# PyBuilder
-.pybuilder/
-target/
+        # If same defense, higher strength first
+        if c1.defense == c2.defense and c1.strength > c2.strength:
+            return True
 
-# Jupyter Notebook
-.ipynb_checkpoints
+        return False
 
-# IPython
-profile_default/
-ipython_config.py
+    def _insert_one_sorted(self, node):
+        if self.first_creature is None or self._comes_before(node, self.first_creature):
+            node.next_creature = self.first_creature
+            self.first_creature = node
+            return
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
+        current = self.first_creature
+        while current.next_creature is not None and not self._comes_before(node, current.next_creature):
+            current = current.next_creature
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
+        node.next_creature = current.next_creature
+        current.next_creature = node
 
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
+    def addCreature(self, creature):
+        copied_chain = self._deep_copy_chain(creature)
 
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-#poetry.toml
+        current = copied_chain
+        while current is not None:
+            next_node = current.next_creature
+            current.next_creature = None
+            self._insert_one_sorted(current)
+            current = next_node
 
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
-#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
-#pdm.lock
-#pdm.toml
-.pdm-python
-.pdm-build/
+    def battle(self, other):
+        if not isinstance(other, Commander):
+            raise ValueError("battle requires another Commander")
 
-# pixi
-#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
-#pixi.lock
-#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
-#   in the .venv directory. It is recommended not to include this directory in version control.
-.pixi
+        while self.first_creature is not None and other.first_creature is not None:
+            my_creature = self.first_creature
+            other_creature = other.first_creature
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
+            # each deals damage to the other
+            my_dies = other_creature.strength >= my_creature.defense
+            other_dies = my_creature.strength >= other_creature.defense
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
+            # if both survive, battle stops
+            if not my_dies and not other_dies:
+                return
 
-# SageMath parsed files
-*.sage.py
+            # remove dead creatures
+            if my_dies:
+                self.first_creature = my_creature.next_creature
+            if other_dies:
+                other.first_creature = other_creature.next_creature
 
-# Environments
-.env
-.envrc
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+            # if one commander has no creatures left and the other has one remaining,
+            # the remaining creature's strength is dealt to the commander
+            if self.first_creature is None and other.first_creature is not None:
+                self.hit_points -= other.first_creature.strength
+                return
 
-# Spyder project settings
-.spyderproject
-.spyproject
+            if other.first_creature is None and self.first_creature is not None:
+                other.hit_points -= self.first_creature.strength
+                return
 
-# Rope project settings
-.ropeproject
+            # if both commanders have no creatures left, battle ends
+            if self.first_creature is None and other.first_creature is None:
+                return
+    def display(self):
+        current = self.first_creature
+        result = f"Commander(hit_points={self.hit_points})"
 
-# mkdocs documentation
-/site
+        if current is None:
+            return result + "\n  No creatures"
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+        while current:
+            result += f"\n  Creature(strength={current.strength}, defense={current.defense})"
+            current = current.next_creature
 
-# Pyre type checker
-.pyre/
+        return result
 
-# pytype static type analyzer
-.pytype/
+if __name__ == "__main__":
 
-# Cython debug symbols
-cython_debug/
+    # Commander 1 creature chain
+    c1 = Creature(6, 5, Creature(4, 3))
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+    # Commander 2 creature chain
+    c2 = Creature(5, 4, Creature(2, 2))
 
-# Abstra
-# Abstra is an AI-powered process automation framework.
-# Ignore directories containing user credentials, local state, and settings.
-# Learn more at https://abstra.io/docs
-.abstra/
+    commander1 = Commander()
+    commander2 = Commander()
 
-# Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
-#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
-#  you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+    commander1.addCreature(c1)
+    commander2.addCreature(c2)
 
-# Ruff stuff:
-.ruff_cache/
+    print("Before battle:")
+    print(commander1.display())
+    print(commander2.display())
 
-# PyPI configuration file
-.pypirc
+    commander1.battle(commander2)
 
-# Cursor
-#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
-#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
-#  refer to https://docs.cursor.com/context/ignore-files
-.cursorignore
-.cursorindexingignore
+    print("\nAfter battle:")
+    print(commander1.display())
+    print(commander2.display())
 
 # Marimo
 marimo/_static/
